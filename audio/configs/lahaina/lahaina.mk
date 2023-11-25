@@ -19,9 +19,9 @@ $(shell python $(SCRIPT) --generate combine --base $(BASE_PATH)/sound_trigger_mi
 
 OVERLAY_PATH := vendor/qcom/opensource/audio-hal/primary-hal/configs/lahaina/yupik_overlay
 
-$(shell python $(SCRIPT) --generate combine --base $(BASE_PATH)/mixer_paths_base.xml --overlay $(OVERLAY_PATH)/mixer_paths_yupikidp_overlay.xml $(OVERLAY_PATH)/mixer_paths_yupikqrd_overlay.xml $(OVERLAY_PATH)/mixer_paths_yupikidprb3_overlay.xml --out_dir $(TARGET_PATH) --out mixer_paths_yupikidp.xml mixer_paths_yupikqrd.xml mixer_paths_yupikidprb3.xml)
+$(shell python $(SCRIPT) --generate combine --base $(BASE_PATH)/mixer_paths_base.xml --overlay $(OVERLAY_PATH)/mixer_paths_yupikidp_overlay.xml $(OVERLAY_PATH)/mixer_paths_yupikqrd_overlay.xml --out_dir $(TARGET_PATH) --out mixer_paths_yupikidp.xml mixer_paths_yupikqrd.xml )
 
-$(shell python $(SCRIPT) --generate combine --base $(BASE_PATH)/sound_trigger_mixer_paths_base.xml --overlay $(OVERLAY_PATH)/sound_trigger_mixer_paths_yupikidp_overlay.xml $(OVERLAY_PATH)/sound_trigger_mixer_paths_yupikqrd_overlay.xml $(OVERLAY_PATH)/sound_trigger_mixer_paths_yupikidprb3_overlay.xml --out_dir $(TARGET_PATH) --out sound_trigger_mixer_paths_yupikidp.xml sound_trigger_mixer_paths_yupikqrd.xml sound_trigger_mixer_paths_yupikidprb3.xml)
+$(shell python $(SCRIPT) --generate combine --base $(BASE_PATH)/sound_trigger_mixer_paths_base.xml --overlay $(OVERLAY_PATH)/sound_trigger_mixer_paths_yupikidp_overlay.xml $(OVERLAY_PATH)/sound_trigger_mixer_paths_yupikqrd_overlay.xml --out_dir $(TARGET_PATH) --out sound_trigger_mixer_paths_yupikidp.xml sound_trigger_mixer_paths_yupikqrd.xml )
 #
 ifneq ($(AUDIO_USE_STUB_HAL), true)
 BOARD_USES_ALSA_AUDIO := true
@@ -102,6 +102,7 @@ AUDIO_FEATURE_ENABLED_BATTERY_LISTENER := true
 
 BOARD_SUPPORTS_OPENSOURCE_STHAL := true
 
+AUDIO_HARDWARE := audio.a2dp.default
 AUDIO_HARDWARE += audio.usb.default
 AUDIO_HARDWARE += audio.r_submix.default
 AUDIO_HARDWARE += audio.primary.lahaina
@@ -114,13 +115,9 @@ AUDIO_WRAPPER += libqahwwrapper
 AUDIO_HAL_TEST_APPS := hal_play_test
 AUDIO_HAL_TEST_APPS += hal_rec_test
 
-#STT META Test App
-AUDIO_STT_META := stt_meta_extract
-
 PRODUCT_PACKAGES += $(AUDIO_HARDWARE)
 PRODUCT_PACKAGES += $(AUDIO_WRAPPER)
 PRODUCT_PACKAGES += $(AUDIO_HAL_TEST_APPS)
-PRODUCT_PACKAGES += $(AUDIO_STT_META)
 PRODUCT_PACKAGES += ftm_test_config_lahaina-qrd-snd-card
 PRODUCT_PACKAGES += ftm_test_config_lahaina-hdk-snd-card
 PRODUCT_PACKAGES += ftm_test_config_lahaina-hhg-snd-card
@@ -258,10 +255,8 @@ PRODUCT_COPY_FILES += \
     vendor/qcom/opensource/audio-hal/primary-hal/configs/lahaina/audio_platform_info_yupikqrd.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio/sku_$(DEVICE_SKU)/audio_platform_info_yupikqrd.xml \
     vendor/qcom/opensource/audio-hal/primary-hal/configs/lahaina/audio_platform_info_yupikidp.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio/sku_$(DEVICE_SKU)/audio_platform_info_yupikidp.xml \
     vendor/qcom/opensource/audio-hal/primary-hal/configs/lahaina/sound_trigger_mixer_paths_yupikidp.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio/sku_$(DEVICE_SKU)/sound_trigger_mixer_paths_yupikidp.xml \
-    vendor/qcom/opensource/audio-hal/primary-hal/configs/lahaina/sound_trigger_mixer_paths_yupikidprb3.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio/sku_$(DEVICE_SKU)/sound_trigger_mixer_paths_yupikidprb3.xml \
     vendor/qcom/opensource/audio-hal/primary-hal/configs/lahaina/sound_trigger_mixer_paths_yupikqrd.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio/sku_$(DEVICE_SKU)/sound_trigger_mixer_paths_yupikqrd.xml \
     vendor/qcom/opensource/audio-hal/primary-hal/configs/lahaina/mixer_paths_yupikidp.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio/sku_$(DEVICE_SKU)/mixer_paths_yupikidp.xml \
-    vendor/qcom/opensource/audio-hal/primary-hal/configs/lahaina/mixer_paths_yupikidprb3.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio/sku_$(DEVICE_SKU)/mixer_paths_yupikidprb3.xml \
     vendor/qcom/opensource/audio-hal/primary-hal/configs/lahaina/mixer_paths_yupikqrd.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio/sku_$(DEVICE_SKU)/mixer_paths_yupikqrd.xml \
     vendor/qcom/opensource/audio-hal/primary-hal/configs/lahaina/audio_tuning_mixer.txt:$(TARGET_COPY_OUT_VENDOR)/etc/audio/sku_$(DEVICE_SKU)/audio_tuning_mixer.txt \
     frameworks/av/services/audiopolicy/config/default_volume_tables.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio/sku_$(DEVICE_SKU)/default_volume_tables.xml \
@@ -584,6 +579,3 @@ PRODUCT_PACKAGES_DEBUG += \
 endif
 
 AUDIO_FEATURE_ENABLED_GKI := true
-
-#enable STT support
-AUDIO_FEATURE_ENABLED_STT_SUPPORT := true

@@ -35,42 +35,6 @@
  * limitations under the License.
  */
 
-/*
-* Changes from Qualcomm Innovation Center are provided under the following license:
-*
-* Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
-*
-* Redistribution and use in source and binary forms, with or without
-* modification, are permitted (subject to the limitations in the
-* disclaimer below) provided that the following conditions are met:
-*
-*    * Redistributions of source code must retain the above copyright
-*      notice, this list of conditions and the following disclaimer.
-*
-*    * Redistributions in binary form must reproduce the above
-*      copyright notice, this list of conditions and the following
-*      disclaimer in the documentation and/or other materials provided
-*      with the distribution.
-*
-*    * Neither the name of Qualcomm Innovation Center, Inc. nor the names of its
-*      contributors may be used to endorse or promote products derived
-*      from this software without specific prior written permission.
-*
-* NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE
-* GRANTED BY THIS LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT
-* HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED
-* WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
-* MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
-* IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
-* ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
-* DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
-* GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
-* INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER
-* IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
-* OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
-* IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-*/
-
 #define LOG_TAG "audio_hw_extn"
 /*#define LOG_NDEBUG 0*/
 #define LOG_NDDEBUG 0
@@ -81,7 +45,6 @@
 #include <fcntl.h>
 #include <cutils/properties.h>
 #include <log/log.h>
-#include <pthread.h>
 #include <unistd.h>
 #include <sched.h>
 
@@ -239,8 +202,6 @@ static bool audio_extn_battery_listener_enabled = false;
 static bool audio_extn_maxx_audio_enabled = false;
 static bool audio_extn_audiozoom_enabled = false;
 static bool audio_extn_hifi_filter_enabled = false;
-static bool audio_extn_concurrent_pcm_record_enabled = false;
-static bool audio_extn_concurrent_low_latency_pcm_record_enabled = false;
 
 #define AUDIO_PARAMETER_KEY_AANC_NOISE_LEVEL "aanc_noise_level"
 #define AUDIO_PARAMETER_KEY_ANC        "anc_enabled"
@@ -481,7 +442,7 @@ static int update_custom_mtmx_coefficients_v2(struct audio_device *adev,
         cust_ch_mixer_cfg[len++] = pinfo->ip_channels;
         cust_ch_mixer_cfg[len++] = pinfo->op_channels;
         for (i = 0; i < (int) (pinfo->op_channels * pinfo->ip_channels); i++) {
-            ALOGV("%s: coeff[%d] %lu", __func__, i, (unsigned long )params->coeffs[i]);
+            ALOGV("%s: coeff[%d] %d", __func__, i, params->coeffs[i]);
             cust_ch_mixer_cfg[len++] = params->coeffs[i];
         }
         err = mixer_ctl_set_array(ctl, cust_ch_mixer_cfg, len);
@@ -1836,23 +1797,6 @@ void audio_extn_usb_set_reconfig(bool is_required)
 #define CIRRUS_SPKR_PROT_LIB_PATH  "/vendor/lib/libcirrusspkrprot.so"
 #endif
 
-
-#define STR_CAT(path, extn) (path extn)
-
-#if LINUX_ENABLED
-#  define SPKR_PROT_LIB_PATH        STR_CAT(LE_LIBDIR, "/audio.spkr.prot.so")
-#  define CIRRUS_SPKR_PROT_LIB_PATH STR_CAT(LE_LIBDIR, "/audio.external.spkr.prot.so")
-#else
-#  ifdef __LP64__
-#    define SPKR_PROT_LIB_PATH         "/vendor/lib64/libspkrprot.so"
-#    define CIRRUS_SPKR_PROT_LIB_PATH  "/vendor/lib64/libcirrusspkrprot.so"
-#  else
-#    define SPKR_PROT_LIB_PATH         "/vendor/lib/libspkrprot.so"
-#    define CIRRUS_SPKR_PROT_LIB_PATH  "/vendor/lib/libcirrusspkrprot.so"
-#  endif
-#endif
-
-
 static void *spkr_prot_lib_handle = NULL;
 
 typedef void (*spkr_prot_init_t)(void *, spkr_prot_init_config_t);
@@ -1893,14 +1837,10 @@ void spkr_prot_feature_init(bool is_feature_enabled)
             is_feature_enabled ? "Enabled" : "NOT Enabled", vendor_enhanced_info);
     if (is_feature_enabled) {
         // dlopen lib
-#if LINUX_ENABLED
-        spkr_prot_lib_handle = dlopen(SPKR_PROT_LIB_PATH, RTLD_NOW);
-#else
         if ((vendor_enhanced_info & 0x3) == 0x0) // Pure AOSP
             spkr_prot_lib_handle = dlopen(CIRRUS_SPKR_PROT_LIB_PATH, RTLD_NOW);
         else
             spkr_prot_lib_handle = dlopen(SPKR_PROT_LIB_PATH, RTLD_NOW);
-#endif
 
         if (spkr_prot_lib_handle == NULL) {
             ALOGE("%s: dlopen failed", __func__);
@@ -3792,7 +3732,6 @@ static int audio_extn_set_multichannel_mask(struct audio_device *adev,
 
     int max_mic_count = platform_get_max_mic_count(adev->platform);
     /* validate input params. Avoid updated channel mask if loopback device */
-    /* validate input params. Avoid updated channel mask if HDMI or loopback device */
     if ((channel_count == 6) &&
         (in->format == AUDIO_FORMAT_PCM_16_BIT) &&
         (!is_loopback_input_device(get_device_types(&in->device_list)))) {
@@ -4938,24 +4877,14 @@ void audio_extn_sco_reset_configuration()
 #ifdef __LP64__
 #ifdef LINUX_ENABLED
 #define HFP_LIB_PATH "/usr/lib64/libhfp.so"
-#define LINUX_PATH true
-#ifdef HAL_LIBRARY_PATH
-#define HFP_LIB_PATH HAL_LIBRARY_PATH
-#endif
 #else
 #define HFP_LIB_PATH "/vendor/lib64/libhfp.so"
-#define LINUX_PATH false
 #endif
 #else
 #ifdef LINUX_ENABLED
 #define HFP_LIB_PATH "/usr/lib/libhfp.so"
-#define LINUX_PATH true
-#ifdef HAL_LIBRARY_PATH
-#define HFP_LIB_PATH HAL_LIBRARY_PATH
-#endif
 #else
 #define HFP_LIB_PATH "/vendor/lib/libhfp.so"
-#define LINUX_PATH false
 #endif
 #endif
 
@@ -4986,12 +4915,8 @@ int hfp_feature_init(bool is_feature_enabled)
                   is_feature_enabled ? "Enabled" : "NOT Enabled");
     if (is_feature_enabled) {
         // dlopen lib
-        if (LINUX_PATH) {
-            char libhfp_path[100];
-            snprintf(libhfp_path, sizeof(libhfp_path), "%s/libhfp.so", HFP_LIB_PATH);
-            hfp_lib_handle = dlopen(libhfp_path, RTLD_NOW);
-        } else
-            hfp_lib_handle = dlopen(HFP_LIB_PATH , RTLD_NOW);
+        hfp_lib_handle = dlopen(HFP_LIB_PATH, RTLD_NOW);
+
         if (!hfp_lib_handle) {
             ALOGE("%s: dlopen failed", __func__);
             goto feature_disabled;
@@ -5700,32 +5625,6 @@ void concurrent_capture_feature_init(bool is_feature_enabled)
 }
 // END: CONCURRENT_CAPTURE ====================================================
 
-// START: CONCURRENT_PCM_RECORD ===============================================
-bool audio_extn_is_concurrent_pcm_record_enabled()
-{
-    return audio_extn_concurrent_pcm_record_enabled;
-}
-
-void concurrent_pcm_record_feature_init(bool is_feature_enabled)
-{
-    audio_extn_concurrent_pcm_record_enabled = is_feature_enabled;
-    ALOGD("%s: ---- Feature CONCURRENT_PCM_RECORD is %s----", __func__, is_feature_enabled? "ENABLED": "NOT ENABLED");
-}
-// END: CONCURRENT_PCM_RECORD =================================================
-
-// START: CONCURRENT_LOW_LATENCY_PCM_RECORD ===============================================
-bool audio_extn_is_concurrent_low_latency_pcm_record_enabled()
-{
-    return audio_extn_concurrent_low_latency_pcm_record_enabled;
-}
-
-void concurrent_low_latency_pcm_record_feature_init(bool is_feature_enabled)
-{
-    audio_extn_concurrent_low_latency_pcm_record_enabled = is_feature_enabled;
-    ALOGD("%s: ---- Feature CONCURRENT_LOW_LATENCY_PCM_RECORD is %s----", __func__, is_feature_enabled? "ENABLED": "NOT ENABLED");
-}
-// END: CONCURRENT_LOW_LATENCY_PCM_RECORD =================================================
-
 // START: COMPRESS_IN ==================================================
 void compress_in_feature_init(bool is_feature_enabled)
 {
@@ -6228,15 +6127,9 @@ static auto_hal_open_echo_reference_stream_t auto_hal_open_echo_reference_stream
 typedef bool (*auto_hal_is_bus_device_usecase_t)(audio_usecase_t);
 static auto_hal_is_bus_device_usecase_t auto_hal_is_bus_device_usecase;
 
-#ifdef ANDROID_U_HAL7
-typedef int (*auto_hal_get_audio_port_v7_t)(struct audio_hw_device*,
-                                struct audio_port_v7*);
-static auto_hal_get_audio_port_v7_t auto_hal_get_audio_port_v7;
-#else
 typedef int (*auto_hal_get_audio_port_t)(struct audio_hw_device*,
                                 struct audio_port*);
 static auto_hal_get_audio_port_t auto_hal_get_audio_port;
-#endif
 
 typedef int (*auto_hal_set_audio_port_config_t)(struct audio_hw_device*,
                                 const struct audio_port_config*);
@@ -6312,15 +6205,9 @@ int auto_hal_feature_init(bool is_feature_enabled)
             !(auto_hal_is_bus_device_usecase =
                  (auto_hal_is_bus_device_usecase_t)dlsym(
                             auto_hal_lib_handle, "auto_hal_is_bus_device_usecase")) ||
-#ifdef ANDROID_U_HAL7
-	    !(auto_hal_get_audio_port_v7 =
-                 (auto_hal_get_audio_port_v7_t)dlsym(
-                            auto_hal_lib_handle, "auto_hal_get_audio_port_v7")) ||
-#else
             !(auto_hal_get_audio_port =
                  (auto_hal_get_audio_port_t)dlsym(
                             auto_hal_lib_handle, "auto_hal_get_audio_port")) ||
-#endif
             !(auto_hal_set_audio_port_config =
                  (auto_hal_set_audio_port_config_t)dlsym(
                             auto_hal_lib_handle, "auto_hal_set_audio_port_config")) ||
@@ -6367,11 +6254,7 @@ feature_disabled:
     auto_hal_open_input_stream = NULL;
     auto_hal_open_echo_reference_stream = NULL;
     auto_hal_is_bus_device_usecase = NULL;
-#ifdef ANDROID_U_HAL7
-    auto_hal_get_audio_port_v7 = NULL;
-#else
     auto_hal_get_audio_port = NULL;
-#endif
     auto_hal_set_audio_port_config = NULL;
     auto_hal_set_parameters = NULL;
     auto_hal_start_hfp_downlink = NULL;
@@ -6401,7 +6284,6 @@ int audio_extn_auto_hal_init(struct audio_device *adev)
         auto_hal_init_config.fp_platform_set_echo_reference = platform_set_echo_reference;
         auto_hal_init_config.fp_platform_get_eccarstate = platform_get_eccarstate;
         auto_hal_init_config.fp_generate_patch_handle = generate_patch_handle;
-        auto_hal_init_config.fp_platform_get_pcm_device_id = platform_get_pcm_device_id;
         return auto_hal_init(adev, auto_hal_init_config);
     }
     else
@@ -6467,21 +6349,13 @@ bool audio_extn_auto_hal_is_bus_device_usecase(audio_usecase_t uc_id)
                             auto_hal_is_bus_device_usecase(uc_id): false);
 }
 
-#ifdef ANDROID_U_HAL7
-int audio_extn_auto_hal_get_audio_port_v7(struct audio_hw_device *dev,
-                                struct audio_port_v7 *config)
-{
-    return ((auto_hal_get_audio_port_v7) ?
-                            auto_hal_get_audio_port_v7(dev, config): 0);
-}
-#else
 int audio_extn_auto_hal_get_audio_port(struct audio_hw_device *dev,
                                 struct audio_port *config)
 {
     return ((auto_hal_get_audio_port) ?
                             auto_hal_get_audio_port(dev, config): 0);
 }
-#endif
+
 int audio_extn_auto_hal_set_audio_port_config(struct audio_hw_device *dev,
                                 const struct audio_port_config *config)
 {
@@ -6621,78 +6495,7 @@ void audio_extn_synth_set_parameters(struct audio_device *adev,
 
 // END: Synth ========================================================================
 
-// START: Power Policy Client ======================================================================
-#ifdef __LP64__
-#define POWER_POLICY_LIB_PATH "/vendor/lib64/libaudiopowerpolicy.so"
-#else
-#define POWER_POLICY_LIB_PATH "/vendor/lib/libaudiopowerpolicy.so"
-#endif
 
-static void* power_policy_lib_handle;
-typedef int (*launch_power_policy_t) (power_policy_init_config_t);
-static launch_power_policy_t launch_power_policy;
-
-static void* power_policy_thread_func(void* arg __unused) {
-    if (launch_power_policy == NULL) {
-        ALOGE("%s: Power Policy launcher is NULL", __func__);
-        goto exit;
-    }
-    ALOGD("%s: Launching Power Policy Client", __func__);
-    power_policy_init_config_t init_config;
-    init_config.fp_in_set_power_policy = in_set_power_policy;
-    init_config.fp_out_set_power_policy = out_set_power_policy;
-    launch_power_policy(init_config);
-
-exit:
-    return NULL;
-}
-
-static int power_policy_feature_init(bool is_feature_enabled)
-{
-    pthread_t tid;
-    pthread_attr_t attr;
-
-    ALOGD("%s: Called with feature %s", __func__,
-                  is_feature_enabled ? "Enabled" : "NOT Enabled");
-    if (is_feature_enabled) {
-        // dlopen lib
-        power_policy_lib_handle = dlopen(POWER_POLICY_LIB_PATH, RTLD_NOW);
-
-        if (!power_policy_lib_handle) {
-            ALOGE("%s: dlopen failed", __func__);
-            goto feature_disabled;
-        }
-        if (!(launch_power_policy = (launch_power_policy_t)dlsym(
-                                    power_policy_lib_handle, "launchPowerPolicyClient")))
-        {
-            ALOGE("%s: dlsym failed", __func__);
-            goto feature_disabled;
-        }
-
-        pthread_attr_init(&attr);
-        pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
-        if (pthread_create(&tid, &attr, power_policy_thread_func, NULL))
-        {
-            ALOGE("%s: Failed to create power policy thread", __func__);
-            goto feature_disabled;
-        }
-        ALOGD("%s:: ---- Feature Power Policy Client is Enabled ----", __func__);
-        return 0;
-    }
-
-feature_disabled:
-    if (power_policy_lib_handle) {
-        dlclose(power_policy_lib_handle);
-        power_policy_lib_handle = NULL;
-    }
-
-    launch_power_policy = NULL;
-
-    ALOGW(":: %s: ---- Feature Power Policy Client is disabled ----", __func__);
-    return -ENOSYS;
-
-// END: Power Policy Client ======================================================================
-}
 void audio_extn_feature_init()
 {
     vendor_enhanced_info = audio_extn_utils_get_vendor_enhanced_info();
@@ -6824,15 +6627,6 @@ void audio_extn_feature_init()
     synth_feature_init(
         property_get_bool("vendor.audio.feature.synth.enable",
                        false));
-    power_policy_feature_init(
-        property_get_bool("vendor.audio.feature.powerpolicy.enable",
-                       false));
-    concurrent_pcm_record_feature_init(
-        property_get_bool("vendor.audio.feature.concurrent_pcm_record.enable",
-                           false));
-    concurrent_low_latency_pcm_record_feature_init(
-        property_get_bool("vendor.audio.feature.concurrent_low_latency_pcm_record.enable",
-                           false));
 }
 
 void audio_extn_set_parameters(struct audio_device *adev,

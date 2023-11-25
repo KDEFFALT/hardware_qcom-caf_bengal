@@ -1,5 +1,5 @@
 
-CONFIG_PATH := $(TARGET_HALS_PATH)/media/conf_files/kona
+CONFIG_PATH := hardware/qcom/media/conf_files/kona
 #Bring all FEATURE FLAG (Compilation) here
 
 PRODUCT_COPY_FILES += \
@@ -32,7 +32,7 @@ ifeq ($(GENERIC_ODM_IMAGE),true)
     device/qcom/common/media/media_profiles.xml:TARGET_COPY_OUT_ODM)/etc/media_profiles_V1_0.xml
 else
   $(warning "Enabling codec2.0 non-audio SW only for non-generic odm build variant")
-PRODUCT_VENDOR_PROPERTIES += debug.stagefright.omx_default_rank=0
+PRODUCT_PROPERTY_OVERRIDES += debug.stagefright.omx_default_rank=0
   PRODUCT_COPY_FILES += \
     device/qcom/common/media/media_profiles.xml:$(TARGET_COPY_OUT_ODM)/etc/media_profiles_V1_0.xml
 endif

@@ -17,42 +17,6 @@
  * limitations under the License.
  */
 
-/*
- * Changes from Qualcomm Innovation Center are provided under the following license:
- *
- * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted (subject to the limitations in the
- * disclaimer below) provided that the following conditions are met:
- *
- *    * Redistributions of source code must retain the above copyright
- *      notice, this list of conditions and the following disclaimer.
- *
- *    * Redistributions in binary form must reproduce the above
- *      copyright notice, this list of conditions and the following
- *      disclaimer in the documentation and/or other materials provided
- *      with the distribution.
- *
- *    * Neither the name of Qualcomm Innovation Center, Inc. nor the names of its
- *      contributors may be used to endorse or promote products derived
- *      from this software without specific prior written permission.
- *
- * NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE
- * GRANTED BY THIS LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT
- * HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED
- * WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
- * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
- * IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
- * ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
- * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
- * GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
- * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER
- * IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
- * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
- * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- */
-
 #include <QService.h>
 #include <binder/Parcel.h>
 #include <core/buffer_allocator.h>
@@ -222,11 +186,6 @@ int HWCSession::Init() {
   Debug::Get()->GetProperty(ENABLE_ASYNC_POWERMODE, &value);
   async_powermode_ = (value == 1);
   DLOGI("builtin_powermode_override: %d", async_powermode_);
-
-  value = 0;
-  Debug::Get()->GetProperty(OVERRIDE_DOZE_MODE_PROP, &value);
-  override_doze_mode_ = (value == 1);
-  DLOGI("override_doze_mode: %d", override_doze_mode_);
 
   value = 0;
   Debug::Get()->GetProperty(ENABLE_ASYNC_VDS_CREATION, &value);
@@ -1237,8 +1196,7 @@ int32_t HWCSession::GetDozeSupport(hwc2_display_t display, int32_t *out_support)
     return HWC2_ERROR_NONE;
   }
 
-  *out_support = (override_doze_mode_ ||
-                  hwc_display_[display]->HasSmartPanelConfig()) ? 1 : 0;
+  *out_support = hwc_display_[display]->HasSmartPanelConfig() ? 1 : 0;
 
   return HWC2_ERROR_NONE;
 }
@@ -1767,10 +1725,6 @@ android::status_t HWCSession::notifyCallback(uint32_t command, const android::Pa
         break;
       }
       status = GetPanelResolution(input_parcel, output_parcel);
-      break;
-
-    case qService::IQService::DELAY_FIRST_COMMIT:
-      status = DelayFirstCommit();
       break;
 
     default:
@@ -2615,15 +2569,6 @@ android::status_t HWCSession::SetStandByMode(const android::Parcel *input_parcel
   return android::NO_ERROR;
 }
 
-android::status_t HWCSession::DelayFirstCommit() {
-  if (!hwc_display_[HWC_DISPLAY_PRIMARY]) {
-    DLOGI("Primary display is not initialized");
-    return -EINVAL;
-  }
-
-  return hwc_display_[HWC_DISPLAY_PRIMARY]->DelayFirstCommit();
-}
-
 int HWCSession::CreatePrimaryDisplay() {
   int status = -EINVAL;
   HWDisplaysInfo hw_displays_info = {};
@@ -3011,7 +2956,7 @@ void HWCSession::DestroyPluggableDisplay(DisplayMapInfo *map_info) {
 
   SCOPE_LOCK(system_locker_);
   {
-    SEQUENCE_CANCEL_SCOPE_LOCK(locker_[client_id]);
+    SEQUENCE_WAIT_SCOPE_LOCK(locker_[client_id]);
     auto &hwc_display = hwc_display_[client_id];
     if (!hwc_display) {
       return;

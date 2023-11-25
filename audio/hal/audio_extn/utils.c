@@ -15,10 +15,6 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
- * Changes from Qualcomm Innovation Center are provided under the following license:
- * Copyright (c) 2023 Qualcomm Innovation Center, Inc. All rights reserved.
- * SPDX-License-Identifier: BSD-3-Clause-Clear
  */
 
 #define LOG_TAG "audio_hw_utils"
@@ -115,13 +111,6 @@
 #define VNDK_FWK_LIB_PATH "/vendor/lib/libqti_vndfwk_detect.so"
 #endif
 
-#ifdef PLATFORM_AUTO
-/* 24 KHz ECNR support */
-#define ECNS_USE_CASE_ACDB_DEV_ID 95
-#define ECNS_UNSUPPORTED_CAPTURE_SAMPLE_RATE_FOR_ADM 24000
-#define ECNS_SUPPORTED_CAPTURE_SAMPLE_RATE_FOR_ADM 48000
-#endif
-
 typedef struct vndkfwk_s {
     void *lib_handle;
     int (*isVendorEnhancedFwk)(void);
@@ -161,7 +150,6 @@ const struct string_to_enum s_flag_name_to_enum_table[] = {
     STRING_TO_ENUM(AUDIO_OUTPUT_FLAG_SYS_NOTIFICATION),
     STRING_TO_ENUM(AUDIO_OUTPUT_FLAG_NAV_GUIDANCE),
     STRING_TO_ENUM(AUDIO_OUTPUT_FLAG_PHONE),
-    STRING_TO_ENUM(AUDIO_OUTPUT_FLAG_ALERTS),
     STRING_TO_ENUM(AUDIO_OUTPUT_FLAG_FRONT_PASSENGER),
     STRING_TO_ENUM(AUDIO_OUTPUT_FLAG_REAR_SEAT),
     STRING_TO_ENUM(AUDIO_INPUT_FLAG_NONE),
@@ -762,14 +750,6 @@ void audio_extn_utils_update_stream_input_app_type_cfg(void *platform,
     app_type_cfg->app_type = platform_get_default_app_type_v2(platform, PCM_CAPTURE);
     app_type_cfg->sample_rate = CODEC_BACKEND_DEFAULT_SAMPLE_RATE;
     app_type_cfg->bit_width = 16;
-#ifdef PLATFORM_AUTO
-    if ((flags & AUDIO_INPUT_FLAG_TIMESTAMP) == 0 &&
-        (flags & AUDIO_INPUT_FLAG_COMPRESS) == 0 &&
-        (flags & AUDIO_INPUT_FLAG_FAST) != 0) {
-        // Support low latency record for different sample rates
-        app_type_cfg->sample_rate = sample_rate;
-    }
-#endif
 }
 
 void audio_extn_utils_update_stream_output_app_type_cfg(void *platform,
@@ -858,11 +838,6 @@ void audio_extn_utils_update_stream_output_app_type_cfg(void *platform,
     app_type_cfg->app_type = platform_get_default_app_type(platform);
     app_type_cfg->sample_rate = CODEC_BACKEND_DEFAULT_SAMPLE_RATE;
     app_type_cfg->bit_width = 16;
-    if (compare_device_type(devices, AUDIO_DEVICE_OUT_BUS) && (flags &
-                        (audio_output_flags_t)AUDIO_OUTPUT_FLAG_FAST)) {
-        // Support low latency playback for different sample rates
-        app_type_cfg->sample_rate = sample_rate;
-    }
 }
 
 static bool audio_is_this_native_usecase(struct audio_usecase *uc)
@@ -947,6 +922,10 @@ void audio_extn_utils_update_stream_app_type_cfg_for_usecase(
         ALOGV("%s Selected apptype: %d", __func__, usecase->stream.out->app_type_cfg.app_type);
         break;
     case PCM_CAPTURE:
+        if (usecase->id == USECASE_AUDIO_RECORD_VOIP
+                              || usecase->id == USECASE_AUDIO_RECORD_VOIP_LOW_LATENCY)
+            usecase->stream.in->app_type_cfg.app_type = APP_TYPE_VOIP_AUDIO;
+        else
             audio_extn_utils_update_stream_input_app_type_cfg(adev->platform,
                                                 &adev->streams_input_cfg_list,
                                                 &usecase->stream.in->device_list,
@@ -1050,8 +1029,7 @@ static int set_stream_app_type_mixer_ctrl(struct audio_device *adev,
 
     char mixer_ctl_name[MAX_LENGTH_MIXER_CONTROL_IN_INT];
     struct mixer_ctl *ctl;
-    size_t app_type_cfg[MAX_LENGTH_MIXER_CONTROL_IN_INT] = {0};
-    int len = 0, rc = 0;
+    int app_type_cfg[MAX_LENGTH_MIXER_CONTROL_IN_INT], len = 0, rc = 0;
     int snd_device_be_idx = -1;
 
     if (stream_type == PCM_PLAYBACK) {
@@ -1326,9 +1304,6 @@ int audio_extn_utils_get_app_sample_rate_for_device(
 {
     char value[PROPERTY_VALUE_MAX] = {0};
     int sample_rate = DEFAULT_OUTPUT_SAMPLING_RATE;
-#ifdef PLATFORM_AUTO
-    int acdb_dev_id;
-#endif
 
     if ((usecase->type == PCM_PLAYBACK) && (usecase->stream.out != NULL)) {
         property_get("vendor.audio.playback.mch.downsample",value,"");
@@ -1367,14 +1342,8 @@ int audio_extn_utils_get_app_sample_rate_for_device(
             usecase->stream.out->sample_rate == OUTPUT_SAMPLING_RATE_44100) ||
             (usecase->stream.out->sample_rate < OUTPUT_SAMPLING_RATE_44100)) ||
             (compare_device_type(&usecase->stream.out->device_list,AUDIO_DEVICE_OUT_SPEAKER))) {
-                if (!((compare_device_type(&usecase->device_list, AUDIO_DEVICE_OUT_BUS)) && ((usecase->stream.out->flags &
-                    (audio_output_flags_t)AUDIO_OUTPUT_FLAG_SYS_NOTIFICATION) || (usecase->stream.out->flags &
-                    (audio_output_flags_t)AUDIO_OUTPUT_FLAG_PHONE) || (usecase->stream.out->flags &
-                    (audio_output_flags_t)AUDIO_OUTPUT_FLAG_NAV_GUIDANCE) || (usecase->stream.out->flags &
-                    (audio_output_flags_t)AUDIO_OUTPUT_FLAG_ALERTS)))) {
-                    /* Reset to default if no native stream is active or default device is speaker*/
-                    usecase->stream.out->app_type_cfg.sample_rate = DEFAULT_OUTPUT_SAMPLING_RATE;
-                }
+            /* Reset to default if no native stream is active or default device is speaker*/
+            usecase->stream.out->app_type_cfg.sample_rate = DEFAULT_OUTPUT_SAMPLING_RATE;
         }
         audio_extn_btsco_get_sample_rate(snd_device, &usecase->stream.out->app_type_cfg.sample_rate);
         sample_rate = usecase->stream.out->app_type_cfg.sample_rate;
@@ -1409,17 +1378,6 @@ int audio_extn_utils_get_app_sample_rate_for_device(
             else
                 sample_rate = SAMPLE_RATE_8000;
         }
-
-        /* ECNR module in DSP does not support 24 KHz sample rate. As a workaround,
-           run ADM at 48 KHz when ECNR is enabled in ACDB topology (e.g. device id = 95)
-        */
-#ifdef PLATFORM_AUTO
-        acdb_dev_id = platform_get_snd_device_acdb_id(snd_device);
-        if (sample_rate == ECNS_UNSUPPORTED_CAPTURE_SAMPLE_RATE_FOR_ADM && acdb_dev_id == ECNS_USE_CASE_ACDB_DEV_ID) {
-            sample_rate = ECNS_SUPPORTED_CAPTURE_SAMPLE_RATE_FOR_ADM;
-            ALOGD("%s: update sample rate from 24K to 48K to support ECNR in PCM_CAPTURE, sample_rate=%d",__func__,sample_rate);
-        }
-#endif
     } else if (usecase->type == TRANSCODE_LOOPBACK_RX) {
         sample_rate = usecase->stream.inout->out_config.sample_rate;
     }
@@ -2828,7 +2786,6 @@ int audio_extn_utils_pcm_get_dsp_presentation_pos(struct stream_out *out,
     int ret = -EINVAL;
     uint64_t time = 0;
     struct snd_pcm_prsnt_position prsnt_position;
-    memset(&prsnt_position, 0, sizeof(struct snd_pcm_prsnt_position));
 
     ALOGV("%s:: Quering DSP position with clock id %d",__func__, clock_id);
     prsnt_position.clock_id = clock_id;

@@ -33,11 +33,6 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
- * Changes from Qualcomm Innovation Center are provided under the following license:
- * Copyright (c) 2023 Qualcomm Innovation Center, Inc. All rights reserved.
- * SPDX-License-Identifier: BSD-3-Clause-Clear
- *
  */
 
 #ifndef AUDIO_EXTN_H
@@ -103,21 +98,13 @@
 #define AUDIO_OUTPUT_FLAG_INTERACTIVE 0x4000000
 #endif
 
-#ifndef AUDIO_DEVICE_IN_SPEAKER_MIC2
-#define AUDIO_DEVICE_IN_SPEAKER_MIC2 0x10000000
-#endif
-
-#ifndef AUDIO_DEVICE_IN_SPEAKER_MIC3
-#define AUDIO_DEVICE_IN_SPEAKER_MIC3 0x20000000
-#endif
-
 int audio_extn_parse_compress_metadata(struct stream_out *out,
                                        struct str_parms *parms);
 
 #define AUDIO_OUTPUT_BIT_WIDTH ((config->offload_info.bit_width == 32) ? 24\
                                    :config->offload_info.bit_width)
 
-#if !defined(ENABLE_EXTENDED_COMPRESS_FORMAT) || defined(ENABLE_AUDIO_LEGACY_PURE)
+#ifndef ENABLE_EXTENDED_COMPRESS_FORMAT
 #define compress_set_metadata(compress, metadata) (0)
 #define compress_get_metadata(compress, metadata) (0)
 #define compress_set_next_track_param(compress, codec_options) (0)
@@ -1275,19 +1262,11 @@ static int __unused audio_extn_hw_loopback_set_audio_port_config(struct audio_hw
 {
     return 0;
 }
-#ifdef ANDROID_U_HAL7
-static int __unused audio_extn_hw_loopback_get_audio_port_v7(struct audio_hw_device *dev __unused,
-                                    struct audio_port_v7 *port_in __unused)
-{
-    return 0;
-}
-#else
 static int __unused audio_extn_hw_loopback_get_audio_port(struct audio_hw_device *dev __unused,
                                     struct audio_port *port_in __unused)
 {
     return 0;
 }
-#endif
 static int __unused audio_extn_hw_loopback_set_param_data(audio_patch_handle_t handle __unused,
                                                audio_extn_loopback_param_id param_id __unused,
                                                audio_extn_loopback_param_payload *payload __unused)
@@ -1366,9 +1345,6 @@ int audio_extn_utils_get_license_params(const struct audio_device *adev,  struct
 #ifndef AUDIO_OUTPUT_FLAG_PHONE
 #define AUDIO_OUTPUT_FLAG_PHONE 0x800000
 #endif
-#ifndef AUDIO_OUTPUT_FLAG_ALERTS
-#define AUDIO_OUTPUT_FLAG_ALERTS 0x4000000
-#endif
 #ifndef AUDIO_OUTPUT_FLAG_FRONT_PASSENGER
 #define AUDIO_OUTPUT_FLAG_FRONT_PASSENGER 0x1000000
 #endif
@@ -1401,13 +1377,8 @@ int audio_extn_auto_hal_open_input_stream(struct stream_in *in);
 int audio_extn_auto_hal_open_echo_reference_stream(struct stream_in *in);
 bool audio_extn_auto_hal_overwrite_priority_for_auto(struct stream_in *in);
 bool audio_extn_auto_hal_is_bus_device_usecase(audio_usecase_t uc_id);
-#ifdef ANDROID_U_HAL7
-int audio_extn_auto_hal_get_audio_port_v7(struct audio_hw_device *dev,
-                                struct audio_port_v7 *config);
-#else
 int audio_extn_auto_hal_get_audio_port(struct audio_hw_device *dev,
                                 struct audio_port *config);
-#endif
 int audio_extn_auto_hal_set_audio_port_config(struct audio_hw_device *dev,
                                 const struct audio_port_config *config);
 void audio_extn_auto_hal_set_parameters(struct audio_device *adev,
@@ -1440,7 +1411,6 @@ typedef struct auto_hal_init_config {
     fp_platform_set_echo_reference_t             fp_platform_set_echo_reference;
     fp_platform_get_eccarstate_t                 fp_platform_get_eccarstate;
     fp_generate_patch_handle_t                   fp_generate_patch_handle;
-    fp_platform_get_pcm_device_id_t              fp_platform_get_pcm_device_id;
 } auto_hal_init_config_t;
 // END: AUTO_HAL FEATURE ==================================================
 
@@ -1457,17 +1427,6 @@ typedef struct synth_init_config {
     fp_select_devices_t                          fp_select_devices;
 } synth_init_config_t;
 // END: SYNTH_HAL FEATURE ==================================================
-
-// START: POWER_POLICY FEATURE ==================================================
-
-typedef void (*fp_in_set_power_policy_t) (uint8_t);
-typedef void (*fp_out_set_power_policy_t) (uint8_t);
-
-typedef struct power_policy_init_config {
-    fp_in_set_power_policy_t                      fp_in_set_power_policy;
-    fp_out_set_power_policy_t                     fp_out_set_power_policy;
-} power_policy_init_config_t;
-// END: POWER_POLICY FEATURE ==================================================
 
 bool audio_extn_edid_is_supported_sr(edid_audio_info* info, int sr);
 bool audio_extn_edid_is_supported_bps(edid_audio_info* info, int bps);
@@ -1499,6 +1458,4 @@ snd_device_t audio_extn_get_loopback_snd_device(struct audio_device *adev,
                                                 int channel_count);
 
 void audio_get_vendor_config_path(char* config_file_path, int path_size);
-bool audio_extn_is_concurrent_pcm_record_enabled();
-bool audio_extn_is_concurrent_low_latency_pcm_record_enabled();
 #endif /* AUDIO_EXTN_H */

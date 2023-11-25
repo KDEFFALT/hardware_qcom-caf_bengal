@@ -192,9 +192,6 @@ if DISABLE_COMPRESS_FORMAT
 AM_CFLAGS += -DAUDIO_DISABLE_COMPRESS_FORMAT
 endif
 
-if HAL_PATH_SPECIFIED
-AM_CFLAGS += -DHAL_LIBRARY_PATH=\"@HAL_PATH@\"
-endif
 h_sources = audio_extn/audio_defs.h \
             audio_extn/audio_extn.h \
             audio_hw.h \
@@ -212,9 +209,6 @@ if AUDIO_PARSER
 audio_primary_default_la_LIBADD += -laudioparsers
 endif
 audio_primary_default_la_CFLAGS = $(AM_CFLAGS) $(GLIB_CFLAGS)
-if HAL_PATH_SPECIFIED
-audio_primary_default_la_CFLAGS += -DHAL_LIBRARY_PATH=\"@HAL_PATH@\"
-endif
 audio_primary_default_la_CFLAGS += -Dstrlcat=g_strlcat
 audio_primary_default_la_CFLAGS += -DINT_MAX=0x7fffffff -Wno-error=deprecated-declarations -DPATH_MAX=1024 -DULONG_MAX=0xFFFFFFFFFFFFFFFFUL
 audio_primary_default_la_CFLAGS += -D__unused=__attribute__\(\(__unused__\)\)

@@ -3,12 +3,6 @@ LOCAL_PATH:= $(call my-dir)
 
 include $(CLEAR_VARS)
 
-ifneq ( ,$(filter U UpsideDownCake 14, $(PLATFORM_VERSION)))
-ifeq ($(TARGET_ARCH), arm64)
-LOCAL_CFLAGS := -DLIB64_AUDIO_HAL="/vendor/lib64/hw/audio.primary."$(TARGET_BOARD_PLATFORM)".so"
-endif
-endif
-
 LOCAL_CFLAGS := -DLIB_AUDIO_HAL="/vendor/lib/hw/audio.primary."$(TARGET_BOARD_PLATFORM)".so"
 LOCAL_CFLAGS += -Wno-unused-variable
 LOCAL_CFLAGS += -Wno-sign-compare
@@ -91,16 +85,9 @@ LOCAL_C_INCLUDES := \
         $(call project-path-for,qcom-audio)/hal \
         $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include \
         $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include/audio \
-        $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/techpack/audio/include \
+	$(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/techpack/audio/include \
         $(call include-path-for, audio-effects) \
         $(call project-path-for,qcom-audio)/hal/audio_extn/
-ifneq ($(BOARD_OPENSOURCE_DIR), )
-   LOCAL_C_INCLUDES += $(BOARD_OPENSOURCE_DIR)/audio-hal/primary-hal/hal \
-                       $(BOARD_OPENSOURCE_DIR)/audio-hal/primary-hal/hal/audio_extn/
-else
-   LOCAL_C_INCLUDES += $(TARGET_HALS_PATH)/audio/hal \
-                       $(TARGET_HALS_PATH)/audio/hal/audio_extn/
-endif # BOARD_OPENSOURCE_DIR
 
 ifeq ($(strip $(AUDIO_FEATURE_ENABLED_DLKM)),true)
   LOCAL_HEADER_LIBRARIES += audio_kernel_headers
@@ -114,10 +101,6 @@ endif
 ifeq ($(TARGET_COMPILE_WITH_MSM_KERNEL),true)
         LOCAL_C_INCLUDES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/techpack/audio/include
         LOCAL_ADDITIONAL_DEPENDENCIES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr
-endif
-
-ifeq ($(ENABLE_AUDIO_LEGACY_TECHPACK),true)
-LOCAL_HEADER_LIBRARIES += qti_legacy_audio_kernel_uapi
 endif
 
 ifneq ($(filter kona lahaina holi,$(TARGET_BOARD_PLATFORM)),)
@@ -178,12 +161,6 @@ ifneq ($(filter msm8992 msm8994 msm8996 msm8998 sdm660 sdm845 apq8098_latv sdm71
 
 include $(CLEAR_VARS)
 
-ifneq ( ,$(filter U UpsideDownCake 14, $(PLATFORM_VERSION)))
-ifeq ($(TARGET_ARCH), arm64)
-LOCAL_CFLAGS := -DLIB64_AUDIO_HAL="/vendor/lib64/hw/audio.primary."$(TARGET_BOARD_PLATFORM)".so"
-endif
-endif
-
 LOCAL_CFLAGS := -DLIB_AUDIO_HAL="/vendor/lib/hw/audio.primary."$(TARGET_BOARD_PLATFORM)".so"
 LOCAL_CFLAGS += -Wno-unused-variable
 LOCAL_CFLAGS += -Wno-sign-compare
@@ -236,8 +213,8 @@ ifneq ($(BOARD_OPENSOURCE_DIR), )
   LOCAL_C_INCLUDES += $(BOARD_OPENSOURCE_DIR)/audio-hal/primary-hal/hal \
                       $(BOARD_OPENSOURCE_DIR)/audio-hal/primary-hal/hal/audio_extn
 else
-  LOCAL_C_INCLUDES += $(TARGET_HALS_PATH)/audio/hal \
-                      $(TARGET_HALS_PATH)/audio/hal/audio_extn
+  LOCAL_C_INCLUDES += vendor/qcom/opensource/audio-hal/primary-hal/hal \
+                      vendor/qcom/opensource/audio-hal/primary-hal/hal/audio_extn
 endif # BOARD_OPENSOURCE_DIR
 
 ifeq ($(strip $(AUDIO_FEATURE_ENABLED_DLKM)),true)
@@ -284,7 +261,7 @@ LOCAL_MODULE_OWNER := google
 LOCAL_PROPRIETARY_MODULE := true
 
 LOCAL_C_INCLUDES := \
-    $(TARGET_HALS_PATH)/audio/hal \
+    hardware/qcom/audio/hal \
     system/media/audio/include/system \
     $(call include-path-for, audio-effects)
 

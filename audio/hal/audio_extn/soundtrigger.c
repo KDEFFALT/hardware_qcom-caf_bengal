@@ -226,9 +226,8 @@ static void get_library_path(char *lib_path)
 static void get_library_path(char *lib_path)
 {
     snprintf(lib_path, MAX_LIBRARY_PATH,
-             SOUND_TRIGGER_LIBRARY_PATH,
+             "/vendor/lib/hw/sound_trigger.primary.%s.so",
              XSTR(SOUND_TRIGGER_PLATFORM_NAME));
-
 }
 #endif
 
@@ -588,7 +587,6 @@ void audio_extn_sound_trigger_update_device_status(snd_device_t snd_device,
                                   __func__, event, snd_device);
         }
     }/*Events for output device, if required can be placed here in else*/
-    clear_devices(&ev_info.device_info.devices);
 }
 
 void audio_extn_sound_trigger_update_stream_status(struct audio_usecase *uc_info,
@@ -647,7 +645,6 @@ void audio_extn_sound_trigger_update_stream_status(struct audio_usecase *uc_info
             }
         }
     }
-    clear_devices(&ev_info.device_info.devices);
 }
 
 void audio_extn_sound_trigger_update_battery_status(bool charging)
@@ -815,7 +812,6 @@ int audio_extn_sound_trigger_init(struct audio_device *adev)
     }
 
     get_library_path(sound_trigger_lib);
-    ALOGV("%s: dlopen sound_trigger_lib path : %s\n", __func__, sound_trigger_lib);
     st_dev->lib_handle = dlopen(sound_trigger_lib, RTLD_NOW);
 
     if (st_dev->lib_handle == NULL) {
@@ -878,7 +874,6 @@ void audio_extn_sound_trigger_deinit(struct audio_device *adev)
     if (st_dev && (st_dev->adev == adev) && st_dev->lib_handle) {
         audio_extn_snd_mon_unregister_listener(st_dev);
         dlclose(st_dev->lib_handle);
-        clear_devices(&st_dev->st_ses_list);
         free(st_dev);
         st_dev = NULL;
     }
