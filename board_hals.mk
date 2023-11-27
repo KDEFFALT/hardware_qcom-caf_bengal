@@ -1,6 +1,7 @@
 # Soong Override
 OVERRIDE_QCOM_HARDWARE_VARIANT := bengal
 QCOM_SOONG_NAMESPACE := hardware/qcom-caf/bengal
+PRODUCT_SOONG_NAMESPACE := hardware/qcom-caf/bengal
 TARGET_HALS_PATH ?= $(QCOM_SOONG_NAMESPACE)
 
 # Audio
