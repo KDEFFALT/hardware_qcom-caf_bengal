@@ -64,30 +64,30 @@ ifeq ($(TARGET_HAS_GENERIC_KERNEL_HEADERS), true)
 AUDIO_FEATURE_ENABLED_GKI := true
 endif
 AUDIO_USE_DEEP_AS_PRIMARY_OUTPUT := false
-AUDIO_FEATURE_ENABLED_VBAT_MONITOR := false
+AUDIO_FEATURE_ENABLED_VBAT_MONITOR := true
 AUDIO_FEATURE_ENABLED_NT_PAUSE_TIMEOUT := true
-AUDIO_FEATURE_ENABLED_ANC_HEADSET := false
-AUDIO_FEATURE_ENABLED_CUSTOMSTEREO := false
+AUDIO_FEATURE_ENABLED_ANC_HEADSET := true
+AUDIO_FEATURE_ENABLED_CUSTOMSTEREO := true
 AUDIO_FEATURE_ENABLED_FLUENCE := true
-AUDIO_FEATURE_ENABLED_HDMI_EDID := false
-AUDIO_FEATURE_ENABLED_HDMI_PASSTHROUGH := false
+AUDIO_FEATURE_ENABLED_HDMI_EDID := true
+AUDIO_FEATURE_ENABLED_HDMI_PASSTHROUGH := true
 #AUDIO_FEATURE_ENABLED_KEEP_ALIVE := true
-AUDIO_FEATURE_ENABLED_DISPLAY_PORT := false
+AUDIO_FEATURE_ENABLED_DISPLAY_PORT := true
 AUDIO_FEATURE_ENABLED_DS2_DOLBY_DAP := false
 AUDIO_FEATURE_ENABLED_HFP := true
 AUDIO_FEATURE_ENABLED_INCALL_MUSIC := false
-AUDIO_FEATURE_ENABLED_MULTI_VOICE_SESSIONS := false
+AUDIO_FEATURE_ENABLED_MULTI_VOICE_SESSIONS := true
 AUDIO_FEATURE_ENABLED_KPI_OPTIMIZE := true
-AUDIO_FEATURE_ENABLED_SPKR_PROTECTION := false
+AUDIO_FEATURE_ENABLED_SPKR_PROTECTION := true
 AUDIO_FEATURE_ENABLED_ACDB_LICENSE := false
 AUDIO_FEATURE_ENABLED_DEV_ARBI := false
 AUDIO_FEATURE_ENABLED_DYNAMIC_LOG := true
-MM_AUDIO_ENABLED_FTM := false
+MM_AUDIO_ENABLED_FTM := true
 TARGET_USES_QCOM_MM_AUDIO := true
-AUDIO_FEATURE_ENABLED_SOURCE_TRACKING := false
+AUDIO_FEATURE_ENABLED_SOURCE_TRACKING := true
 AUDIO_FEATURE_ENABLED_GEF_SUPPORT := true
 BOARD_SUPPORTS_QAHW := false
-AUDIO_FEATURE_ENABLED_RAS := false
+AUDIO_FEATURE_ENABLED_RAS := true
 AUDIO_FEATURE_ENABLED_DLKM := true
 AUDIO_FEATURE_ENABLED_USB_BURST_MODE := false
 AUDIO_FEATURE_ENABLED_SVA_MULTI_STAGE := true
@@ -117,67 +117,43 @@ PRODUCT_PACKAGES += $(AUDIO_HAL_TEST_APPS)
 AUDIO_FEATURE_ENABLED_AUTO_HAL := true
 AUDIO_FEATURE_ENABLED_EXT_HW_PLUGIN := true
 AUDIO_FEATURE_ENABLED_AUDIO_CONTROL_HAL := true
-ifneq ( ,$(filter T Tiramisu 13 U UpsideDownCake 14, $(PLATFORM_VERSION)))
-AUDIO_FEATURE_ENABLED_AUDIO_CONTROL_HAL_AIDL := true
-endif
 ifneq ($(ENABLE_HYP),true)
 AUDIO_FEATURE_ENABLED_AUTO_AUDIOD := true
 
-ifneq ( ,$(filter msmnile_au gen4_au msmnile_au_km4 msmnile_au_ar msmnile_tb, $(TARGET_PRODUCT)))
+ifneq ( ,$(filter msmnile_au msmnile_tb, $(TARGET_PRODUCT)))
 AUDIO_FEATURE_ENABLED_DAEMON_SUPPORT := true
+AUDIO_FEATURE_ENABLED_SILENT_BOOT := true
 else
 AUDIO_FEATURE_ENABLED_DAEMON_SUPPORT := false
+AUDIO_FEATURE_ENABLED_SILENT_BOOT := false
 endif
 AUDIO_FEATURE_ENABLED_SND_MONITOR := false
 else
 AUDIO_FEATURE_ENABLED_SND_MONITOR := true
 endif
-ifeq ($(ENABLE_AUDIO_LEGACY_TECHPACK),true)
-AUDIO_FEATURE_ENABLED_SILENT_BOOT := true
-endif
 AUDIO_FEATURE_ENABLED_FM_TUNER_EXT := true
 AUDIO_FEATURE_ENABLED_ICC := true
-ifneq ( ,$(filter T Tiramisu 13 U UpsideDownCake 14, $(PLATFORM_VERSION)))
+ifneq ( ,$(filter S 12, $(PLATFORM_VERSION)))
 AUDIO_FEATURE_ENABLED_POWER_POLICY := true
 endif
-ifneq ( ,$(filter msmnile_gvmq msmnile_au gen4_au msmnile_au_km4 msmnile_au_ar, $(TARGET_BOARD_PLATFORM)$(TARGET_BOARD_SUFFIX)$(TARGET_BOARD_DERIVATIVE_SUFFIX)))
-AUDIO_FEATURE_ENABLED_AUDIO_PARSERS := true
-endif
-ifneq ( ,$(filter msmnile_tb, $(TARGET_PRODUCT)))
+ifeq ($(TARGET_BOARD_PLATFORM)$(TARGET_BOARD_SUFFIX), msmnile_gvmq)
 AUDIO_FEATURE_ENABLED_AUDIO_PARSERS := true
 endif
 ##AUTOMOTIVE_AUDIO_FEATURE_FLAGS
-
-ifneq ( ,$(filter U UpsideDownCake 14, $(PLATFORM_VERSION)))
-AUDIO_FEATURE_ENABLED_HAL_V7 := true
-endif
 
 ifneq ($(strip $(TARGET_USES_RRO)), true)
 #Audio Specific device overlays
 DEVICE_PACKAGE_OVERLAYS += vendor/qcom/opensource/audio-hal/primary-hal/configs/common/overlay
 endif
 
-ifneq ( ,$(filter T Tiramisu 13 U UpsideDownCake 14, $(PLATFORM_VERSION)))
-ifneq ( ,$(filter msmnile_au  gen4_au msmnile_au_km4 msmnile_tb msmnile_au_ar, $(TARGET_BOARD_PLATFORM)$(TARGET_BOARD_SUFFIX))$(TARGET_BOARD_DERIVATIVE_SUFFIX))
-AUDIO_FEATURE_MMAP_AAUDIO = true
-endif
-endif
-
 #Automotive audio specific device overlays
 DEVICE_PACKAGE_OVERLAYS += vendor/qcom/opensource/audio-hal/primary-hal/configs/common_au/overlay
 
-ifneq ( ,$(filter U UpsideDownCake 14, $(PLATFORM_VERSION)))
 PRODUCT_COPY_FILES += \
-    $(TOPDIR)vendor/qcom/opensource/audio-hal/primary-hal/configs/msmnile_au/audio_effects_64.conf:$(TARGET_COPY_OUT_VENDOR)/etc/audio_effects.conf
-else
-PRODUCT_COPY_FILES += \
-    $((TOPDIR)vendor/qcom/opensource/audio-hal/primary-hal/configs/msmnile_au/audio_effects.conf:$(TARGET_COPY_OUT_VENDOR)/etc/audio_effects.conf
-endif
-
-PRODUCT_COPY_FILES += \
-    vendor/qcom/opensource/audio-hal/primary-hal/configs/msmnile_au/mixer_paths_adp.xml:$(TARGET_COPY_OUT_VENDOR)/etc/mixer_paths_adp.xml \
     vendor/qcom/opensource/audio-hal/primary-hal/configs/msmnile_au/audio_io_policy.conf:$(TARGET_COPY_OUT_VENDOR)/etc/audio_io_policy.conf \
+    vendor/qcom/opensource/audio-hal/primary-hal/configs/msmnile_au/audio_effects.conf:$(TARGET_COPY_OUT_VENDOR)/etc/audio_effects.conf \
     vendor/qcom/opensource/audio-hal/primary-hal/configs/msmnile_au/audio_effects.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio_effects.xml \
+    vendor/qcom/opensource/audio-hal/primary-hal/configs/msmnile_au/mixer_paths_adp.xml:$(TARGET_COPY_OUT_VENDOR)/etc/mixer_paths_adp.xml \
     vendor/qcom/opensource/audio-hal/primary-hal/configs/msmnile_au/mixer_paths_sa8295_adp.xml:$(TARGET_COPY_OUT_VENDOR)/etc/mixer_paths_sa8295_adp.xml \
     vendor/qcom/opensource/audio-hal/primary-hal/configs/msmnile_au/audio_tuning_mixer.txt:$(TARGET_COPY_OUT_VENDOR)/etc/audio_tuning_mixer.txt \
     vendor/qcom/opensource/audio-hal/primary-hal/configs/msmnile_au/sound_trigger_platform_info.xml:$(TARGET_COPY_OUT_VENDOR)/etc/sound_trigger_platform_info.xml \
@@ -192,32 +168,14 @@ PRODUCT_COPY_FILES += \
     frameworks/native/data/etc/android.hardware.audio.pro.xml:$(TARGET_COPY_OUT_VENDOR)/etc/permissions/android.hardware.audio.pro.xml \
     frameworks/native/data/etc/android.hardware.audio.low_latency.xml:$(TARGET_COPY_OUT_VENDOR)/etc/permissions/android.hardware.audio.low_latency.xml
 
-
-#Automotive audio card defs dummpy files for elite and ar co-exit.
-PRODUCT_COPY_FILES += \
-    $(TOPDIR)vendor/qcom/opensource/audio-hal/primary-hal/configs/msmnile_au/card-defs-dummy.xml:$(TARGET_COPY_OUT_VENDOR)/etc/card-defs-dummy.xml
-
 #XML Audio configuration files
 ifneq ($(TARGET_USES_AOSP_FOR_AUDIO), true)
-ifneq ( ,$(filter U UpsideDownCake 14, $(PLATFORM_VERSION)))
-PRODUCT_COPY_FILES += \
-    $(TOPDIR)vendor/qcom/opensource/audio-hal/primary-hal/configs/msmnile_au/audio_policy_configuration_7_0.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio/audio_policy_configuration.xml
-else
 PRODUCT_COPY_FILES += \
     $(TOPDIR)vendor/qcom/opensource/audio-hal/primary-hal/configs/msmnile_au/audio_policy_configuration.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio/audio_policy_configuration.xml
 endif
-endif
-
-ifneq ( ,$(filter U UpsideDownCake 14, $(PLATFORM_VERSION)))
-PRODUCT_COPY_FILES += \
-    $(TOPDIR)vendor/qcom/opensource/audio-hal/primary-hal/configs/common_au/audio_policy_configuration_7_0.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio_policy_configuration.xml \
-    $(TOPDIR)frameworks/av/services/audiopolicy/config/a2dp_audio_policy_configuration_7_0.xml:$(TARGET_COPY_OUT_VENDOR)/etc/a2dp_audio_policy_configuration.xml
-else
 PRODUCT_COPY_FILES += \
     $(TOPDIR)vendor/qcom/opensource/audio-hal/primary-hal/configs/common_au/audio_policy_configuration.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio_policy_configuration.xml \
-    $(TOPDIR)frameworks/av/services/audiopolicy/config/a2dp_audio_policy_configuration.xml:$(TARGET_COPY_OUT_VENDOR)/etc/a2dp_audio_policy_configuration.xml
-endif
-PRODUCT_COPY_FILES += \
+    $(TOPDIR)frameworks/av/services/audiopolicy/config/a2dp_audio_policy_configuration.xml:$(TARGET_COPY_OUT_VENDOR)/etc/a2dp_audio_policy_configuration.xml \
     $(TOPDIR)frameworks/av/services/audiopolicy/config/audio_policy_volumes.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio_policy_volumes.xml \
     $(TOPDIR)frameworks/av/services/audiopolicy/config/default_volume_tables.xml:$(TARGET_COPY_OUT_VENDOR)/etc/default_volume_tables.xml \
     $(TOPDIR)frameworks/av/services/audiopolicy/config/r_submix_audio_policy_configuration.xml:$(TARGET_COPY_OUT_VENDOR)/etc/r_submix_audio_policy_configuration.xml \
@@ -344,18 +302,8 @@ PRODUCT_PROPERTY_OVERRIDES += \
 ro.bluetooth.a2dp_offload.supported=true
 
 # Disable A2DP offload
-ifeq ($(ENABLE_HYP), true)
-ifeq ($(TARGET_GVMGH_SPECIFIC), false)
-PRODUCT_PROPERTY_OVERRIDES += \
-persist.bluetooth.a2dp_offload.disabled=true
-else
 PRODUCT_PROPERTY_OVERRIDES += \
 persist.bluetooth.a2dp_offload.disabled=false
-endif
-else
-PRODUCT_PROPERTY_OVERRIDES += \
-persist.bluetooth.a2dp_offload.disabled=false
-endif
 
 # A2DP offload DSP supported encoder list
 PRODUCT_PROPERTY_OVERRIDES += \
@@ -410,9 +358,9 @@ vendor.audio.hal.output.suspend.supported=false
 #Enable AAudio MMAP/NOIRQ data path
 #1 is AAUDIO_POLICY_NEVER so it will not try MMAP
 #2 is AAUDIO_POLICY_AUTO so it will try MMAP then fallback to Legacy path
-PRODUCT_PROPERTY_OVERRIDES += aaudio.mmap_policy=2
+PRODUCT_PROPERTY_OVERRIDES += aaudio.mmap_policy=1
 #Allow EXCLUSIVE then fall back to SHARED.
-PRODUCT_PROPERTY_OVERRIDES += aaudio.mmap_exclusive_policy=2
+PRODUCT_PROPERTY_OVERRIDES += aaudio.mmap_exclusive_policy=1
 PRODUCT_PROPERTY_OVERRIDES += aaudio.hw_burst_min_usec=2000
 
 #enable mirror-link feature
@@ -484,8 +432,7 @@ vendor.audio.feature.audiozoom.enable=false \
 vendor.audio.feature.auto_hal.enable=true \
 vendor.audio.feature.synth.enable=true \
 vendor.audio.feature.powerpolicy.enable=true \
-vendor.audio.feature.concurrent_pcm_record.enable=true \
-vendor.audio.feature.concurrent_low_latency_pcm_record.enable=true
+vendor.audio.feature.concurrent_pcm_record.enable=true
 ifeq ($(AUDIO_FEATURE_ENABLED_SND_MONITOR), true)
 PRODUCT_ODM_PROPERTIES += \
 vendor.audio.feature.snd_mon.enable=true
@@ -540,8 +487,7 @@ vendor.audio.feature.audiozoom.enable=false \
 vendor.audio.feature.auto_hal.enable=true \
 vendor.audio.feature.synth.enable=true \
 vendor.audio.feature.powerpolicy.enable=true \
-vendor.audio.feature.concurrent_pcm_record.enable=true \
-vendor.audio.feature.concurrent_low_latency_pcm_record.enable=true
+vendor.audio.feature.concurrent_pcm_record.enable=true
 ifeq ($(AUDIO_FEATURE_ENABLED_SND_MONITOR), true)
 PRODUCT_ODM_PROPERTIES += \
 vendor.audio.feature.snd_mon.enable=true
@@ -581,17 +527,6 @@ PRODUCT_PACKAGES += \
     android.hardware.audio.effect@6.0 \
     android.hardware.audio.effect@6.0-impl
 
-# enable audio hidl hal 7.0
-ifneq ( ,$(filter U UpsideDownCake 14, $(PLATFORM_VERSION)))
-PRODUCT_PACKAGES += \
-    android.hardware.audio@7.0 \
-    android.hardware.audio.common@7.0 \
-    android.hardware.audio.common@7.0-util \
-    android.hardware.audio@7.0-impl \
-    android.hardware.audio.effect@7.0 \
-    android.hardware.audio.effect@7.0-impl
-endif
-
 # enable sound trigger hidl hal 2.3
 PRODUCT_PACKAGES += \
     android.hardware.soundtrigger@2.3-impl
@@ -604,7 +539,7 @@ PRODUCT_PACKAGES_DEBUG += \
     AudioSettings
 
 # for HIDL related audiocontrol packages
-ifeq ( ,$(filter 12 13 T U UpsideDownCake 14,$(PLATFORM_VERSION)))
+ifeq ( ,$(filter 12 Tiramisu,$(PLATFORM_VERSION)))
 PRODUCT_PACKAGES += \
     android.hardware.automotive.audiocontrol@2.0-service \
     android.hardware.automotive.audiocontrol@2.0

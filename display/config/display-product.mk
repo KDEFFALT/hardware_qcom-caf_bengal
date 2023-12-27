@@ -4,9 +4,12 @@ PRODUCT_PACKAGES += \
     android.hardware.graphics.mapper@4.0-impl-qti-display \
     vendor.qti.hardware.display.allocator-service \
     vendor.qti.hardware.display.composer-service \
+    android.hardware.memtrack@1.0-impl \
+    android.hardware.memtrack@1.0-service \
     gralloc.$(TARGET_BOARD_PLATFORM) \
     lights.$(TARGET_BOARD_PLATFORM) \
     hwcomposer.$(TARGET_BOARD_PLATFORM) \
+    memtrack.$(TARGET_BOARD_PLATFORM) \
     libsdmcore \
     libsdmutils \
     libqdMetaData \
@@ -19,13 +22,6 @@ PRODUCT_PACKAGES += \
     init.qti.display_boot.rc \
     modetest
 
-ifneq ($(TARGET_DISABLE_MEMTRACK), true)
-PRODUCT_PACKAGES += \
-    android.hardware.memtrack@1.0-impl \
-    android.hardware.memtrack@1.0-service \
-    memtrack.$(TARGET_BOARD_PLATFORM)
-endif
-
 PRODUCT_VENDOR_PROPERTIES += \
     persist.demo.hdmirotationlock=false \
     persist.sys.sf.color_saturation=1.0 \
@@ -33,7 +29,6 @@ PRODUCT_VENDOR_PROPERTIES += \
     debug.sf.hw=0 \
     debug.egl.hw=0 \
     debug.sf.latch_unsignaled=1 \
-    debug.sf.high_fps_late_app_phase_offset_ns=1000000 \
     debug.mdpcomp.logs=0 \
     vendor.gralloc.disable_ubwc=0 \
     vendor.display.disable_scaler=0 \
@@ -46,8 +41,7 @@ PRODUCT_VENDOR_PROPERTIES += \
     vendor.display.enable_camera_smooth=1 \
     vendor.display.enable_allow_idle_fallback=1 \
     vendor.display.disable_idle_time_video=1 \
-    vendor.display.disable_idle_time_hdr=1 \
-    debug.sf.predict_hwc_composition_strategy=0
+    vendor.display.disable_idle_time_hdr=1
 
 # Enable offline rotator for Bengal, Monaco, Khaje.
 ifneq ($(filter bengal monaco khaje, $(TARGET_BOARD_PLATFORM)),$(TARGET_BOARD_PLATFORM))
@@ -60,17 +54,22 @@ PRODUCT_VENDOR_PROPERTIES += \
     vendor.display.camera_noc_efficiency_factor=0.70 \
     vendor.display.disable_layer_stitch=0 \
     vendor.display.secure_preview_buffer_format=420_sp \
-    vendor.gralloc.secure_preview_buffer_format=420_sp \
-    debug.sf.enable_advanced_sf_phase_offset=1 \
-    debug.sf.high_fps_late_sf_phase_offset_ns=-2000000 \
-    debug.sf.high_fps_early_phase_offset_ns=-5000000 \
-    debug.sf.high_fps_early_gl_phase_offset_ns=-2000000
+    vendor.gralloc.secure_preview_buffer_format=420_sp
 endif
 
 ifeq ($(TARGET_BOARD_PLATFORM),monaco)
 PRODUCT_VENDOR_PROPERTIES += \
     vendor.display.disable_layer_stitch=1
-PRODUCT_DEFAULT_PROPERTY_OVERRIDES += ro.surface_flinger.max_frame_buffer_acquired_buffers=3
+endif
+
+# Guard QCOM OFFSET props for Bengal, Monaco, Khaje.
+ifeq ($(TARGET_USE_QCOM_OFFSET),true)
+PRODUCT_VENDOR_PROPERTIES += \
+    debug.sf.enable_advanced_sf_phase_offset=1 \
+    debug.sf.high_fps_late_app_phase_offset_ns=1000000 \
+    debug.sf.high_fps_late_sf_phase_offset_ns=-5000000 \
+    debug.sf.high_fps_early_phase_offset_ns=-5000000 \
+    debug.sf.high_fps_early_gl_phase_offset_ns=-5000000
 endif
 
 ifeq ($(TARGET_BOARD_PLATFORM),kona)
@@ -107,8 +106,6 @@ PRODUCT_DEFAULT_PROPERTY_OVERRIDES += ro.surface_flinger.use_color_management=tr
 PRODUCT_DEFAULT_PROPERTY_OVERRIDES += ro.surface_flinger.wcg_composition_dataspace=143261696
 PRODUCT_DEFAULT_PROPERTY_OVERRIDES += ro.surface_flinger.protected_contents=true
 PRODUCT_DEFAULT_PROPERTY_OVERRIDES += ro.surface_flinger.force_hwc_copy_for_virtual_displays=true
-PRODUCT_DEFAULT_PROPERTY_OVERRIDES += ro.surface_flinger.max_frame_buffer_acquired_buffers=3
-PRODUCT_DEFAULT_PROPERTY_OVERRIDES += ro.surface_flinger.max_virtual_display_dimension=4096
 
 ifneq (,$(filter userdebug eng, $(TARGET_BUILD_VARIANT)))
 # Recovery is enabled, logging is enabled

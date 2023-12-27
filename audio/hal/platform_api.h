@@ -9,7 +9,7 @@
  * You may obtain a copy of the License at
  *
  *      http://www.apache.org/licenses/LICENSE-2.0
-
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -168,7 +168,6 @@ struct audio_custom_mtmx_in_params {
     struct audio_custom_mtmx_in_params_info in_info;
     uint32_t ip_channels;
     uint32_t mic_ch;
-    uint32_t i2s_ch;
     uint32_t ec_ref_ch;
     struct audio_custom_mtmx_params_in_ch_info in_ch_info[MAX_IN_CHANNELS];
 };
@@ -293,7 +292,6 @@ void platform_add_app_type(const char *uc_type,
 
 /* From platform_info.c */
 int platform_info_init(const char *filename, void *, caller_t);
-void platform_info_deinit();
 
 void platform_snd_card_update(void *platform, card_status_t scard_status);
 
@@ -308,7 +306,7 @@ bool platform_check_and_set_codec_backend_cfg(struct audio_device* adev,
 bool platform_check_and_set_capture_codec_backend_cfg(struct audio_device* adev,
                    struct audio_usecase *usecase, snd_device_t snd_device);
 int platform_get_usecase_index(const char * usecase);
-int platform_set_usecase_pcm_id(audio_usecase_t usecase, int32_t type, int32_t pcm_id, int32_t fe_id);
+int platform_set_usecase_pcm_id(audio_usecase_t usecase, int32_t type, int32_t pcm_id);
 void platform_set_echo_reference(struct audio_device *adev, bool enable,
                                  struct listnode *out_devices);
 int platform_check_and_set_swap_lr_channels(struct audio_device *adev, bool swap_channels);

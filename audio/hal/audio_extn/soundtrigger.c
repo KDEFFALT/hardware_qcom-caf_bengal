@@ -226,9 +226,8 @@ static void get_library_path(char *lib_path)
 static void get_library_path(char *lib_path)
 {
     snprintf(lib_path, MAX_LIBRARY_PATH,
-             SOUND_TRIGGER_LIBRARY_PATH,
+             "/vendor/lib/hw/sound_trigger.primary.%s.so",
              XSTR(SOUND_TRIGGER_PLATFORM_NAME));
-
 }
 #endif
 
@@ -815,7 +814,6 @@ int audio_extn_sound_trigger_init(struct audio_device *adev)
     }
 
     get_library_path(sound_trigger_lib);
-    ALOGV("%s: dlopen sound_trigger_lib path : %s\n", __func__, sound_trigger_lib);
     st_dev->lib_handle = dlopen(sound_trigger_lib, RTLD_NOW);
 
     if (st_dev->lib_handle == NULL) {

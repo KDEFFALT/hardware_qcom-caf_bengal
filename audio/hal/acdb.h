@@ -15,11 +15,7 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
- * Changes from Qualcomm Innovation Center are provided under the following license:
- * Copyright (c) 2023 Qualcomm Innovation Center, Inc. All rights reserved.
- * SPDX-License-Identifier: BSD-3-Clause-Clear
-*/
+ */
 
 #ifndef ACDB_H
 #define ACDB_H
@@ -59,7 +55,6 @@ typedef int  (*acdb_init_v4_t)(void *, int);
 typedef void (*acdb_send_audio_cal_t)(int, int, int , int);
 typedef void (*acdb_send_audio_cal_v3_t)(int, int, int, int, int);
 typedef void (*acdb_send_audio_cal_v4_t)(int, int, int, int, int, int);
-typedef void (*acdb_send_audio_cal_v6_t)(int, int, int, int, int, int, int, int);
 typedef void (*acdb_send_voice_cal_t)(int, int);
 typedef int (*acdb_reload_vocvoltable_t)(int);
 typedef int  (*acdb_get_default_app_type_t)(void);
@@ -72,7 +67,7 @@ typedef int (*acdb_reload_t) (char *, char *, char *, int);
 typedef int (*acdb_reload_v2_t) (char *, char *, char *, struct listnode *);
 typedef int (*acdb_send_gain_dep_cal_t)(int, int, int, int, int);
 typedef void (*acdb_set_fluence_nn_state_t)(bool);
-typedef int (*acdb_get_fluence_nn_state_t)();
+typedef bool (*acdb_get_fluence_nn_state_t)();
 
 struct meta_key_list {
     struct listnode list;

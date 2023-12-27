@@ -38,7 +38,7 @@
 /*
 * Changes from Qualcomm Innovation Center are provided under the following license:
 *
-* Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
+* Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted (subject to the limitations in the
@@ -81,7 +81,6 @@
 #include <fcntl.h>
 #include <cutils/properties.h>
 #include <log/log.h>
-#include <pthread.h>
 #include <unistd.h>
 #include <sched.h>
 
@@ -240,7 +239,6 @@ static bool audio_extn_maxx_audio_enabled = false;
 static bool audio_extn_audiozoom_enabled = false;
 static bool audio_extn_hifi_filter_enabled = false;
 static bool audio_extn_concurrent_pcm_record_enabled = false;
-static bool audio_extn_concurrent_low_latency_pcm_record_enabled = false;
 
 #define AUDIO_PARAMETER_KEY_AANC_NOISE_LEVEL "aanc_noise_level"
 #define AUDIO_PARAMETER_KEY_ANC        "anc_enabled"
@@ -481,7 +479,7 @@ static int update_custom_mtmx_coefficients_v2(struct audio_device *adev,
         cust_ch_mixer_cfg[len++] = pinfo->ip_channels;
         cust_ch_mixer_cfg[len++] = pinfo->op_channels;
         for (i = 0; i < (int) (pinfo->op_channels * pinfo->ip_channels); i++) {
-            ALOGV("%s: coeff[%d] %lu", __func__, i, (unsigned long )params->coeffs[i]);
+            ALOGV("%s: coeff[%d] %d", __func__, i, params->coeffs[i]);
             cust_ch_mixer_cfg[len++] = params->coeffs[i];
         }
         err = mixer_ctl_set_array(ctl, cust_ch_mixer_cfg, len);
@@ -3792,7 +3790,6 @@ static int audio_extn_set_multichannel_mask(struct audio_device *adev,
 
     int max_mic_count = platform_get_max_mic_count(adev->platform);
     /* validate input params. Avoid updated channel mask if loopback device */
-    /* validate input params. Avoid updated channel mask if HDMI or loopback device */
     if ((channel_count == 6) &&
         (in->format == AUDIO_FORMAT_PCM_16_BIT) &&
         (!is_loopback_input_device(get_device_types(&in->device_list)))) {
@@ -5713,19 +5710,6 @@ void concurrent_pcm_record_feature_init(bool is_feature_enabled)
 }
 // END: CONCURRENT_PCM_RECORD =================================================
 
-// START: CONCURRENT_LOW_LATENCY_PCM_RECORD ===============================================
-bool audio_extn_is_concurrent_low_latency_pcm_record_enabled()
-{
-    return audio_extn_concurrent_low_latency_pcm_record_enabled;
-}
-
-void concurrent_low_latency_pcm_record_feature_init(bool is_feature_enabled)
-{
-    audio_extn_concurrent_low_latency_pcm_record_enabled = is_feature_enabled;
-    ALOGD("%s: ---- Feature CONCURRENT_LOW_LATENCY_PCM_RECORD is %s----", __func__, is_feature_enabled? "ENABLED": "NOT ENABLED");
-}
-// END: CONCURRENT_LOW_LATENCY_PCM_RECORD =================================================
-
 // START: COMPRESS_IN ==================================================
 void compress_in_feature_init(bool is_feature_enabled)
 {
@@ -6228,15 +6212,9 @@ static auto_hal_open_echo_reference_stream_t auto_hal_open_echo_reference_stream
 typedef bool (*auto_hal_is_bus_device_usecase_t)(audio_usecase_t);
 static auto_hal_is_bus_device_usecase_t auto_hal_is_bus_device_usecase;
 
-#ifdef ANDROID_U_HAL7
-typedef int (*auto_hal_get_audio_port_v7_t)(struct audio_hw_device*,
-                                struct audio_port_v7*);
-static auto_hal_get_audio_port_v7_t auto_hal_get_audio_port_v7;
-#else
 typedef int (*auto_hal_get_audio_port_t)(struct audio_hw_device*,
                                 struct audio_port*);
 static auto_hal_get_audio_port_t auto_hal_get_audio_port;
-#endif
 
 typedef int (*auto_hal_set_audio_port_config_t)(struct audio_hw_device*,
                                 const struct audio_port_config*);
@@ -6312,15 +6290,9 @@ int auto_hal_feature_init(bool is_feature_enabled)
             !(auto_hal_is_bus_device_usecase =
                  (auto_hal_is_bus_device_usecase_t)dlsym(
                             auto_hal_lib_handle, "auto_hal_is_bus_device_usecase")) ||
-#ifdef ANDROID_U_HAL7
-	    !(auto_hal_get_audio_port_v7 =
-                 (auto_hal_get_audio_port_v7_t)dlsym(
-                            auto_hal_lib_handle, "auto_hal_get_audio_port_v7")) ||
-#else
             !(auto_hal_get_audio_port =
                  (auto_hal_get_audio_port_t)dlsym(
                             auto_hal_lib_handle, "auto_hal_get_audio_port")) ||
-#endif
             !(auto_hal_set_audio_port_config =
                  (auto_hal_set_audio_port_config_t)dlsym(
                             auto_hal_lib_handle, "auto_hal_set_audio_port_config")) ||
@@ -6367,11 +6339,7 @@ feature_disabled:
     auto_hal_open_input_stream = NULL;
     auto_hal_open_echo_reference_stream = NULL;
     auto_hal_is_bus_device_usecase = NULL;
-#ifdef ANDROID_U_HAL7
-    auto_hal_get_audio_port_v7 = NULL;
-#else
     auto_hal_get_audio_port = NULL;
-#endif
     auto_hal_set_audio_port_config = NULL;
     auto_hal_set_parameters = NULL;
     auto_hal_start_hfp_downlink = NULL;
@@ -6401,7 +6369,6 @@ int audio_extn_auto_hal_init(struct audio_device *adev)
         auto_hal_init_config.fp_platform_set_echo_reference = platform_set_echo_reference;
         auto_hal_init_config.fp_platform_get_eccarstate = platform_get_eccarstate;
         auto_hal_init_config.fp_generate_patch_handle = generate_patch_handle;
-        auto_hal_init_config.fp_platform_get_pcm_device_id = platform_get_pcm_device_id;
         return auto_hal_init(adev, auto_hal_init_config);
     }
     else
@@ -6467,21 +6434,13 @@ bool audio_extn_auto_hal_is_bus_device_usecase(audio_usecase_t uc_id)
                             auto_hal_is_bus_device_usecase(uc_id): false);
 }
 
-#ifdef ANDROID_U_HAL7
-int audio_extn_auto_hal_get_audio_port_v7(struct audio_hw_device *dev,
-                                struct audio_port_v7 *config)
-{
-    return ((auto_hal_get_audio_port_v7) ?
-                            auto_hal_get_audio_port_v7(dev, config): 0);
-}
-#else
 int audio_extn_auto_hal_get_audio_port(struct audio_hw_device *dev,
                                 struct audio_port *config)
 {
     return ((auto_hal_get_audio_port) ?
                             auto_hal_get_audio_port(dev, config): 0);
 }
-#endif
+
 int audio_extn_auto_hal_set_audio_port_config(struct audio_hw_device *dev,
                                 const struct audio_port_config *config)
 {
@@ -6629,7 +6588,7 @@ void audio_extn_synth_set_parameters(struct audio_device *adev,
 #endif
 
 static void* power_policy_lib_handle;
-typedef int (*launch_power_policy_t) (power_policy_init_config_t);
+typedef int (*launch_power_policy_t) ();
 static launch_power_policy_t launch_power_policy;
 
 static void* power_policy_thread_func(void* arg __unused) {
@@ -6829,9 +6788,6 @@ void audio_extn_feature_init()
                        false));
     concurrent_pcm_record_feature_init(
         property_get_bool("vendor.audio.feature.concurrent_pcm_record.enable",
-                           false));
-    concurrent_low_latency_pcm_record_feature_init(
-        property_get_bool("vendor.audio.feature.concurrent_low_latency_pcm_record.enable",
                            false));
 }
 
